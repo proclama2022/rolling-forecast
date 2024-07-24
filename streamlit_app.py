@@ -10,7 +10,7 @@ client = anthropic.Anthropic(api_key=st.secrets["anthropic_api_key"])
 
 def generate_forecast_with_claude(historical_data, forecast_periods, assumptions):
     data_str = historical_data.to_json(orient='records')
-    prompt = f"""
+    prompt = f"""\n\nHuman:
     Dato il seguente storico di dati finanziari: {data_str}
 
     E considerate le seguenti assumptions fornite dall'utente:
