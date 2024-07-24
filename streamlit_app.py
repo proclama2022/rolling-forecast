@@ -31,7 +31,7 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
             {"role": "user", "content": prompt}
         ]
     )
-    return response.content.text
+    return response.content[0].text
 
 st.title('Advanced Financial Rolling Forecast Generator')
 
