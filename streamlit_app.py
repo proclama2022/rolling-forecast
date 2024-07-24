@@ -8,7 +8,6 @@ import json
 client = anthropic.Anthropic(api_key=st.secrets["anthropic_api_key"])
 
 def generate_forecast_with_claude(historical_data, forecast_periods, assumptions):
-    # Convertiamo la lista di dizionari in una stringa JSON
     data_str = json.dumps(historical_data)
     prompt = f"""
     Dato il seguente storico di dati finanziari: {data_str}
