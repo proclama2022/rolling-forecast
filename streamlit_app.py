@@ -38,7 +38,8 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
     ],
         max_tokens=4096,
     )
-    return eval(response.completion)
+    print(response)
+    return eval(response.content)
 
 st.title('Advanced Financial Rolling Forecast Generator')
 
