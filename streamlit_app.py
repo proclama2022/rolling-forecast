@@ -29,6 +29,7 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
         ],
         "explanation": "string"
     }}
+    \n\nAssistant:
     """
     
     response = client.completions.create(
