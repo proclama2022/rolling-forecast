@@ -105,9 +105,3 @@ with tab2:
         
         st.subheader("Forecast Aggiornato e Spiegazione")
         st.markdown(forecast_result)
-
-st.markdown("""
-Questa app genera o aggiorna un rolling forecast basato su dati di bilancio specifici e assumptions fornite dall'utente.
-Utilizza Claude 3.5 Sonnet per produrre previsioni che tengono conto delle relazioni tra le diverse voci di bilancio e delle assumptions fornite.
-Il risultato è presentato come una tabella Markdown seguita da una spiegazione testuale.
-""")
