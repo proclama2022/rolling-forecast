@@ -1,9 +1,5 @@
 streamlit
 pandas
-pytesseract
-docx2txt
-openpyxl
-fitz
+numpy
 anthropic
-Pillow
 plotly

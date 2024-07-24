@@ -1,77 +1,132 @@
 import streamlit as st
-from sales_forecast import generate_sales_forecast
-from cost_forecast import generate_cost_forecast
-from utils import analyze_forecast_with_ai, extract_data_from_balance, parse_extracted_data
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import anthropic
 
-st.title("Generatore di Forecast Finanziario")
+# Configurazione di Anthropic (assicurati di avere una chiave API valida)
+client = anthropic.Anthropic(api_key=st.secrets["anthropic_api_key"])
 
-# Caricamento del bilancio
-uploaded_balance = st.file_uploader("Carica il tuo bilancio di verifica o bilancio CEE", type=['pdf', 'docx', 'xlsx', 'xls', 'txt'])
-extracted_text = ""
-if uploaded_balance:
-    extracted_text = extract_data_from_balance(uploaded_balance)
-    st.success("Bilancio caricato e testo estratto con successo!")  # Messaggio di conferma
+def generate_forecast_with_claude(historical_data, forecast_periods, assumptions):
+    data_str = historical_data.to_json(orient='records')
+    prompt = f"""
+    Dato il seguente storico di dati finanziari: {data_str}
 
-# Criteri di estrazione
-extraction_criteria = st.text_input("Inserisci i criteri di estrazione (es. 'Ricavi, Costi, Utile Netto')", "Ricavi, Costi, Utile Netto")
+    E considerate le seguenti assumptions fornite dall'utente:
+    {assumptions}
 
-# Periodo di forecast
-forecast_period = st.number_input("Numero di mesi da prevedere", min_value=1, max_value=36, value=36, step=1)
+    Genera una previsione per i prossimi {forecast_periods} periodi per ciascuna voce di bilancio.
+    Considera trend, stagionalità, possibili relazioni tra le voci e le assumptions fornite.
+    Fornisci il risultato come una lista di dizionari, ciascuno contenente le previsioni per tutte le voci di bilancio.
+    Includi anche una breve spiegazione di come le assumptions hanno influenzato le previsioni.
 
-tab1, tab2, tab3, tab4 = st.tabs(["Previsione Vendite", "Previsione Costi", "Riepilogo", "Analisi AI"])
+    Formato di risposta:
+    {{
+        "forecast": [
+            {{"Ricavi": float, "Costi Materie Prime": float, "Costi del Personale": float, "Altri Costi Operativi": float}},
+            ...
+        ],
+        "explanation": "string"
+    }}
+    """
+    
+    response = client.completions.create(
+        model="claude-3-sonnet-20240229",
+        prompt=prompt,
+        max_tokens_to_sample=1000,
+    )
+    return eval(response.completion)
+
+st.title('Advanced Financial Rolling Forecast Generator')
+
+# Definizione delle voci di bilancio
+balance_items = ['Ricavi', 'Costi Materie Prime', 'Costi del Personale', 'Altri Costi Operativi']
+
+# Input per le assumptions
+assumptions = st.text_area("Inserisci le assumptions per la previsione (es. crescita del mercato, nuovi prodotti, cambiamenti nei costi):", 
+                           "Prevediamo una crescita del mercato del 5% annuo. Lanceremo un nuovo prodotto nel secondo trimestre che dovrebbe aumentare i ricavi del 10%. I costi delle materie prime potrebbero aumentare del 3% a causa dell'inflazione.")
+
+# Creazione delle tab
+tab1, tab2 = st.tabs(["Nuovo Forecast", "Aggiorna Forecast Esistente"])
 
 with tab1:
-    st.header("Previsione Vendite")
-    sales_forecast = generate_sales_forecast(extracted_text, forecast_period)
-
-with tab2:
-    st.header("Previsione Costi")
-    cost_forecast = generate_cost_forecast(extracted_text, forecast_period)
-
-with tab3:
-    st.header("Riepilogo Finanziario")
-    if sales_forecast is not None and cost_forecast is not None:
-        combined_forecast = pd.merge(sales_forecast, cost_forecast, on=['Anno', 'Mese'])
-        combined_forecast['Profitto'] = combined_forecast['Vendite_Totali'] - combined_forecast['Costi_Totali']
-
-        st.dataframe(combined_forecast)
-
+    st.header("Nuovo Forecast")
+    
+    date = st.date_input("Data di bilancio")
+    data = {}
+    for item in balance_items:
+        data[item] = st.number_input(f"{item} (€)", value=0.0, step=1000.0, key=f"new_{item}")
+    
+    if st.button('Genera Forecast', key="new_forecast"):
+        historical_data = pd.DataFrame([data], index=[date])
+        
+        forecast_periods = st.number_input('Numero di periodi da prevedere', min_value=1, max_value=12, value=3, key="new_periods")
+        forecast_result = generate_forecast_with_claude(historical_data, forecast_periods, assumptions)
+        
+        forecast_dates = pd.date_range(start=date + timedelta(days=1), periods=forecast_periods, freq='M')
+        forecast_data = pd.DataFrame(forecast_result['forecast'], index=forecast_dates)
+        
+        full_data = pd.concat([historical_data, forecast_data])
+        
+        st.subheader("Previsione")
+        st.dataframe(full_data)
+        
+        st.subheader("Spiegazione della previsione")
+        st.write(forecast_result['explanation'])
+        
+        # Visualizzazione
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=combined_forecast['Mese'] + ' ' + combined_forecast['Anno'].astype(str),
-                             y=combined_forecast['Vendite_Totali'], name='Vendite'))
-        fig.add_trace(go.Bar(x=combined_forecast['Mese'] + ' ' + combined_forecast['Anno'].astype(str),
-                             y=combined_forecast['Costi_Totali'], name='Costi'))
-        fig.add_trace(go.Scatter(x=combined_forecast['Mese'] + ' ' + combined_forecast['Anno'].astype(str),
-                                 y=combined_forecast['Profitto'], name='Profitto', yaxis='y2'))
-
-        fig.update_layout(title='Riepilogo Finanziario',
-                          yaxis_title='Euro',
-                          yaxis2=dict(title='Profitto', overlaying='y', side='right'),
-                          barmode='group')
-
+        for item in balance_items:
+            fig.add_trace(go.Scatter(x=full_data.index, y=full_data[item], name=item))
+        fig.update_layout(title='Rolling Forecast', xaxis_title='Data', yaxis_title='Valore (€)')
         st.plotly_chart(fig)
 
-        csv = combined_forecast.to_csv(index=False)
-        st.download_button(label="Scarica riepilogo come CSV",
-                           data=csv,
-                           file_name="riepilogo_finanziario.csv",
-                           mime="text/csv")
-    else:
-        st.write("Genera prima le previsioni di vendite e costi.")
+with tab2:
+    st.header("Aggiorna Forecast Esistente")
+    
+    uploaded_file = st.file_uploader("Carica il file CSV del forecast esistente", type="csv")
+    
+    if uploaded_file is not None:
+        existing_forecast = pd.read_csv(uploaded_file, index_col=0, parse_dates=True)
+        st.dataframe(existing_forecast)
+        
+        st.subheader("Inserisci i nuovi dati di bilancio")
+        new_date = st.date_input("Data di aggiornamento", key="update_date")
+        new_data = {}
+        for item in balance_items:
+            new_data[item] = st.number_input(f"{item} (€)", value=0.0, step=1000.0, key=f"update_{item}")
+        
+        if st.button('Aggiorna Forecast', key="update_forecast"):
+            updated_historical = existing_forecast.copy()
+            updated_historical.loc[new_date] = new_data
+            updated_historical = updated_historical.sort_index()
+            
+            remaining_periods = len(existing_forecast) - len(updated_historical)
+            if remaining_periods > 0:
+                forecast_result = generate_forecast_with_claude(updated_historical, remaining_periods, assumptions)
+                forecast_dates = pd.date_range(start=new_date + timedelta(days=1), periods=remaining_periods, freq='M')
+                new_forecast_data = pd.DataFrame(forecast_result['forecast'], index=forecast_dates)
+                
+                updated_forecast = pd.concat([updated_historical, new_forecast_data])
+            else:
+                updated_forecast = updated_historical
+            
+            st.subheader("Forecast Aggiornato")
+            st.dataframe(updated_forecast)
+            
+            if remaining_periods > 0:
+                st.subheader("Spiegazione della previsione aggiornata")
+                st.write(forecast_result['explanation'])
+            
+            # Visualizzazione
+            fig = go.Figure()
+            for item in balance_items:
+                fig.add_trace(go.Scatter(x=updated_forecast.index, y=updated_forecast[item], name=item))
+            fig.update_layout(title='Rolling Forecast Aggiornato', xaxis_title='Data', yaxis_title='Valore (€)')
+            st.plotly_chart(fig)
 
-with tab4:
-    st.header("Analisi AI del Forecast")
-    if sales_forecast is not None and cost_forecast is not None:
-        if st.button("Genera Analisi AI"):
-            extracted_data = parse_extracted_data(extracted_text, extraction_criteria)
-            ai_analysis = analyze_forecast_with_ai(sales_forecast, cost_forecast, forecast_period)
-            st.markdown(ai_analysis)
-
-            st.download_button(label="Scarica Analisi AI come TXT",
-                               data=ai_analysis,
-                               file_name="analisi_ai_forecast.txt",
-                               mime="text/plain")
-    else:
-        st.write("Genera prima le previsioni di vendite e costi per ottenere un'analisi AI.")
+st.markdown("""
+Questa app genera o aggiorna un rolling forecast basato su dati di bilancio specifici e assumptions fornite dall'utente.
+Utilizza Claude 3.5 Sonnet per produrre previsioni che tengono conto delle relazioni tra le diverse voci di bilancio e delle assumptions fornite.
+""")
