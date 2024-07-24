@@ -32,9 +32,9 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
     """
     
     response = client.completions.create(
-        model="claude-3-sonnet-20240229",
+        model="claude-3-5-sonnet-20240620",
         prompt=prompt,
-        max_tokens_to_sample=1000,
+        max_tokens_to_sample=4096,
     )
     return eval(response.completion)
 
