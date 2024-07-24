@@ -33,7 +33,9 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
     
     response = client.messages.create(
         model="claude-3-5-sonnet-20240620",
-        messages=[{"role":"user", "content":prompt}]
+        messages=[
+        {"role": "user", "content": prompt}
+    ],
         max_tokens=4096,
     )
     return eval(response.completion)
