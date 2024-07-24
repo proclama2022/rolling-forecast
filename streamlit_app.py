@@ -10,7 +10,7 @@ client = anthropic.Anthropic(api_key=st.secrets["anthropic_api_key"])
 
 def generate_forecast_with_claude(historical_data, forecast_periods, assumptions):
     data_str = historical_data.to_json(orient='records')
-    prompt = f"""\n\nHuman:
+    prompt = f"""
     Dato il seguente storico di dati finanziari: {data_str}
 
     E considerate le seguenti assumptions fornite dall'utente:
@@ -29,13 +29,12 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
         ],
         "explanation": "string"
     }}
-    \n\nAssistant:
     """
     
-    response = client.completions.create(
+    response = client.messages.create(
         model="claude-3-5-sonnet-20240620",
-        prompt=prompt,
-        max_tokens_to_sample=4096,
+        messages=[{"role":"user", "content":prompt}]
+        max_tokens=4096,
     )
     return eval(response.completion)
 
