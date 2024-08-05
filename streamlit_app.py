@@ -39,18 +39,39 @@ def generate_forecast_with_claude(historical_data, forecast_periods, assumptions
 st.title('Advanced Financial Rolling Forecast Generator')
 
 # Definizione delle voci di bilancio
-balance_items = ['Valore della produzione',
-    '+/- Variazione delle rimanenze',
-    '- Costi esterni',
-    'Valore aggiunto',
-    '- Costi per il personale',
-    'EBITDA',
-    '- Costi non monetari',
+balance_items = [
+    '+ Vendite di prodotti o servizi',
+    '+ Altri ricavi',
+    '- Costi delle materie prime',
+    '- Costi di produzione diretti',
+    '- Costi di distribuzione e vendita variabili',
+    '- Affitti',
+    '- Utenze (elettricità, acqua, gas)',
+    '- Manutenzione e riparazioni',
+    '- Spese amministrative generali',
+    '- Salari e stipendi',
+    '- Contributi previdenziali',
+    '- Altri benefici del personale',
+    '- Spese di marketing e pubblicità',
+    '- Spese di viaggio e rappresentanza',
+    '- Spese di ricerca e sviluppo',
+    '- Spese legali e professionali',
+    '- Ammortamento di immobilizzazioni materiali e immateriali',
+    '- Svalutazioni di asset',
+    '- Interessi su prestiti e mutui',
+    '- Altri costi finanziari',
+    '- Imposte sul reddito',
+    '- Altre imposte (IVA, imposte locali)'
+]
+
+# Calcolo delle voci derivate
+derived_items = [
+    'Margine lordo',
+    'EBTDA',
     'EBIT',
-    '+/- Proventi ed oneri finanziari',
-    'Risultato ante imposte',
-    '- Imposte',
-    'Utile d\'esercizio']
+    'Risultato operativo (EBT)',
+    'Risultato netto'
+]
 
 kpi_percentages = [
     'Percentuale variazione ricavi (su base annua)',
@@ -66,6 +87,11 @@ data = {}
 for item in balance_items:
     data[item] = st.number_input(f"{item} (€)", value=0.0, step=1000.0, key=f"new_{item}")
 
+# Aggiunta delle voci derivate (calcolate automaticamente)
+st.header("Voci derivate (calcolate automaticamente)")
+for item in derived_items:
+    st.text(f"{item}: Calcolato automaticamente")
+
 st.header("Inserisci le previsioni future")
 kpi = {}
 for item in kpi_percentages:
@@ -79,7 +105,6 @@ seasonality = st.text_area("Descrivi eventuale stagionalità:", "Es. Prevediamo 
 # Input per il numero di mesi del forecast
 forecast_months = st.number_input('Numero di mesi per il rolling forecast', min_value=1, max_value=24, value=6)
 
-
 if st.button('Genera Forecast', key="new_forecast"):
     historical_data = [{"Data": date.strftime("%Y-%m-%d"), **data}]
     
@@ -87,4 +112,3 @@ if st.button('Genera Forecast', key="new_forecast"):
     
     st.subheader("Previsione e Spiegazione")
     st.markdown(forecast_result)
-
