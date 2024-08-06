@@ -57,18 +57,20 @@ balance_structure = [
         '- Affitti',
         '- Utenze (elettricità, acqua, gas)',
         '- Manutenzione e riparazioni',
-        '- Spese amministrative generali'
+        '- Spese amministrative generali',
+        '- Canoni leasing e noleggio'
     ]),
     ("Costi del personale", [
         '- Salari e stipendi',
         '- Contributi previdenziali',
-        '- Altri benefici del personale'
+        '- TFR e altri costi del personale'
     ]),
     ("Spese operative", [
         '- Spese di marketing e pubblicità',
         '- Spese di viaggio e rappresentanza',
         '- Spese di ricerca e sviluppo',
-        '- Spese legali e professionali'
+        '- Spese legali e professionali',
+        '- Spese generali e oneri di gestione'
     ]),
     ("EBITDA", []),  # Voce derivata
     ("Ammortamenti e svalutazioni", [
@@ -83,7 +85,6 @@ balance_structure = [
     ("Risultato operativo (EBT)", []),  # Voce derivata
     ("Tasse e imposte", [
         '- Imposte sul reddito',
-        '- Altre imposte (IVA, imposte locali)'
     ]),
     ("Risultato netto", [])  # Voce derivata
 ]
